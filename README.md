@@ -95,7 +95,7 @@ pragma solidity ^0.4.11;
 contract Token
 {
     // COMMENT: This is my token contract
-    balances[msg.sender] = 100;
+    balance[msg.sender] = 100;
     mapping (address => uint) balance;
 }
 ```
@@ -117,8 +117,8 @@ contract Token
     mapping (address => uint) balance;
     
     function transfer(uint amount, address recipient) {
-        balances[msg.sender] -= amount;
-        balances[recipient] += amount;
+        balance[msg.sender] -= amount;
+        balance[recipient] += amount;
     }
 }
 ```
@@ -138,11 +138,11 @@ contract Token
     mapping (address => uint) balance;
     
     function transfer(uint amount, address recipient) {
-        if(balances[msg.sender] < amount) {
+        if(balance[msg.sender] < amount) {
           throw;
         }
-        balances[msg.sender] -= amount;
-        balances[recipient] += amount;
+        balance[msg.sender] -= amount;
+        balance[recipient] += amount;
     }
 }
 ```
@@ -164,12 +164,12 @@ contract Token
         if(balances[msg.sender] < amount) {
           throw;
         }
-        balances[msg.sender] -= amount;
-        balances[recipient] += amount;
+        balance[msg.sender] -= amount;
+        balance[recipient] += amount;
     }
     
     function balanceOf(address holder) constant returns (uint) {
-      return balances[holder];
+      return balance[holder];
     }
 }
 ```
