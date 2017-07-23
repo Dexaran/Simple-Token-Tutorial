@@ -81,3 +81,99 @@ contract Token
     mapping (address => uint) balance;
 }
 ```
+Обратиться к балансу какого-либо пользователя можно так: `balance[0x0123456] = 123;` << Присвоение адресу `0x0123456` некоторого количества токенов (`123`).
+
+Переменные инициализируются в момент создания контракта. Если переменной явно не присвоено значение, то она будет инициализирована со значением стандартным для данного типа (0x0 для адреса, 0 для uint, false для bool).
+
+Существуют локальные переменные - это переменные, объявленные внутри вызова функций. Такие переменные не расходуют **газ** на создание и не записываются в данные хранилища контракта, а существуют только локально в памяти клиента в момент исполнения. По завершении исполнения функции они удаляются.
+
+Т.к. контракт создается транзакцией, то в момент создания контракта доступны переменные `msg`, так что мы можем инициализировать контракт и сразу же присвоить 100 токенов создателю.
+
+```js
+pragma solidity ^0.4.11;
+
+contract Token
+{
+    // COMMENT: This is my token contract
+    balances[msg.sender] = 100;
+    mapping (address => uint) balance;
+}
+```
+
+Теперь мы должны написать функцию для передачи токенов с баланса одного пользователя на баланс другого. Создадим функцию, которая будет принимать два параметра: количество передаваемых токенов и адрес получателя.
+
+Когда пользователь хочет передать свои токены он должен вызвать функцию в данном контракте и передать в неё параметры: сколько токенов он собирается передать и адрес того кому передаются эти токены.
+
+В результате выполнения мы должны уменьшить баланс отправителя транзакции на указанное количество токенов и увеличить баланс получателя на это же значение.
+
+
+```js
+pragma solidity ^0.4.11;
+
+contract Token
+{
+    // COMMENT: This is my token contract
+    balances[msg.sender] = 100;
+    mapping (address => uint) balance;
+    
+    function transfer(uint amount, address recipient) {
+        balances[msg.sender] -= amount;
+        balances[recipient] += amount;
+    }
+}
+```
+
+В нашем случае контракт содержит потенциальную уязвимость. Если пользователь не имеет на балансе `amount` токенов, то результатом вычитания `amount` из его баланса станет переполнение стека и баланс пользователя станет равен `2**256 - (balance[msg.sender] - amount)`, а не ошибка `Stack Overflow`.
+
+Чтобы этого избежать нужно добавить проверку перед выполнением вычислений.
+
+
+```js
+pragma solidity ^0.4.11;
+
+contract Token
+{
+    // COMMENT: This is my token contract
+    balances[msg.sender] = 100;
+    mapping (address => uint) balance;
+    
+    function transfer(uint amount, address recipient) {
+        if(balances[msg.sender] < amount) {
+          throw;
+        }
+        balances[msg.sender] -= amount;
+        balances[recipient] += amount;
+    }
+}
+```
+
+Опкод `throw` вызовет прерывание транзакции и сожжет весь оставшийся на момент исполнения газ.
+
+Теперь добавим getter функцию чтобы пользователи могли поросматривать балансы без необходимости посылать в контракт транзакцию и тратить на это средства. Добавим к функции модификатор `constant returns` - это позволит вызывать конракт локально для извлечения значения (`return`). Нам так же необходимо указать один параметр - баланс кого мы хотим узнать и тип возвращаемого значения (`uint` т.к. это число токенов на балансе).
+
+```js
+pragma solidity ^0.4.11;
+
+contract Token
+{
+    // COMMENT: This is my token contract
+    balances[msg.sender] = 100;
+    mapping (address => uint) balance;
+    
+    function transfer(uint amount, address recipient) {
+        if(balances[msg.sender] < amount) {
+          throw;
+        }
+        balances[msg.sender] -= amount;
+        balances[recipient] += amount;
+    }
+    
+    function balanceOf(address holder) constant returns (uint) {
+      return balances[holder];
+    }
+}
+```
+
+На этом всё, наш контракт простого токена готов. Вы можете задеплоить его в тестовую сеть и попробовать его использовать. Как задеплоить контракт вы можете узнать в этой инструкции: https://github.com/Sparke2/Contract-Tutorials/blob/master/README.md
+
+Вы так же можете прочитать о стандартах токенов для Ethereum: [ERC20 стандарт токена](https://github.com/ethereum/eips/issues/20) и [ERC223 стандарт токен](https://github.com/ethereum/eips/issues/223).
